@@ -45,19 +45,17 @@ type Storage interface {
 // InMemoryStorage keeps cookies and visited urls in memory
 // without persisting data on the disk.
 type InMemoryStorage struct {
-	visitedURLs map[uint64]bool
-	lock        *sync.RWMutex
-	jar         *cookiejar.Jar
+	visitedSyncURLs *sync.Map
+
+	jar *cookiejar.Jar
 }
 
 // Init initializes InMemoryStorage
 func (s *InMemoryStorage) Init() error {
-	if s.visitedURLs == nil {
-		s.visitedURLs = make(map[uint64]bool)
+	if s.visitedSyncURLs == nil {
+		s.visitedSyncURLs = new(sync.Map)
 	}
-	if s.lock == nil {
-		s.lock = &sync.RWMutex{}
-	}
+
 	if s.jar == nil {
 		var err error
 		s.jar, err = cookiejar.New(nil)
@@ -68,17 +66,13 @@ func (s *InMemoryStorage) Init() error {
 
 // Visited implements Storage.Visited()
 func (s *InMemoryStorage) Visited(requestID uint64) error {
-	s.lock.Lock()
-	s.visitedURLs[requestID] = true
-	s.lock.Unlock()
+	s.visitedSyncURLs.Store(requestID, true)
 	return nil
 }
 
 // IsVisited implements Storage.IsVisited()
 func (s *InMemoryStorage) IsVisited(requestID uint64) (bool, error) {
-	s.lock.RLock()
-	visited := s.visitedURLs[requestID]
-	s.lock.RUnlock()
+	_, visited := s.visitedSyncURLs.Load(requestID)
 	return visited, nil
 }
 

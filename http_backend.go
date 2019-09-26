@@ -128,9 +128,12 @@ func (h *httpBackend) GetMatchingRule(domain string) *LimitRule {
 }
 
 func (h *httpBackend) Cache(request *http.Request, bodySize int, cacheDir string) (*Response, error) {
+	// Ignore caching all the time, always do a request
 	if cacheDir == "" || request.Method != "GET" {
 		return h.Do(request, bodySize)
 	}
+
+	// Try to get from cache
 	sum := sha1.Sum([]byte(request.URL.String()))
 	hash := hex.EncodeToString(sum[:])
 	dir := path.Join(cacheDir, hash[:2])
@@ -143,10 +146,14 @@ func (h *httpBackend) Cache(request *http.Request, bodySize int, cacheDir string
 			return resp, err
 		}
 	}
+
+	// Not in cache, do request
 	resp, err := h.Do(request, bodySize)
 	if err != nil || resp.StatusCode >= 500 {
 		return resp, err
 	}
+
+	// Create cache on filesystem
 	if _, err := os.Stat(dir); err != nil {
 		if err := os.MkdirAll(dir, 0750); err != nil {
 			return resp, err
