@@ -55,6 +55,7 @@ type Request struct {
 type serializableRequest struct {
 	URL     string
 	Method  string
+	Depth   int
 	Body    []byte
 	ID      uint32
 	Ctx     map[string]interface{}
@@ -146,6 +147,7 @@ func (r *Request) PostMultipart(URL string, requestData map[string][]byte) error
 
 // Retry submits HTTP request again with the same parameters
 func (r *Request) Retry() error {
+	r.Headers.Del("Cookie")
 	return r.collector.scrape(r.URL.String(), r.Method, r.Depth, r.Body, r.Ctx, *r.Headers, false)
 }
 
@@ -174,6 +176,7 @@ func (r *Request) Marshal() ([]byte, error) {
 	sr := &serializableRequest{
 		URL:    r.URL.String(),
 		Method: r.Method,
+		Depth:  r.Depth,
 		Body:   body,
 		ID:     r.ID,
 		Ctx:    ctx,
